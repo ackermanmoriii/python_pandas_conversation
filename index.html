@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini سوپر اپ: ایده، کد، و تجسم</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.33.0/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.33.0/theme-monokai.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.33.0/mode-python.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.33.0/mode-text.js"></script>
+
+    <style>
+        /* فونت وزیرمتن */
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap');
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+        }
+
+        /* --- استایل‌های تب ۱ (ایده به کد) --- */
+        .ace-output-container {
+            height: 400px; /* ارتفاع برای خروجی کد */
+            width: 100%;
+            border-radius: 0.5rem;
+            border: 1px solid #4B5563; /* gray-600 */
+        }
+        
+        /* Monokai-styled <pre> block (برای خروجی قدیمی مدل بصری تب 2 - دیگر استفاده نمی شود) */
+        .monokai-pre {
+            background-color: #272822;
+            color: #F8F8F2;
+            padding: 1em;
+            border-radius: 0.5rem;
+            font-family: "Consolas", "Courier New", monospace;
+            line-height: 1.5;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            min-height: 400px;
+            direction: ltr;
+            text-align: left;
+        }
+
+        /* --- (جدید) استایل‌های تب ۲ (تجسم هیبریدی) --- */
+        /* این استایل ها از replace_pandas.html آمده اند */
+        #hybrid-editor {
+            width: 100%;
+            height: 40vh; /* ارتفاع ادیتور ورودی تب ۲ */
+            border-radius: 0.5rem;
+            border: 1px solid #4B5563;
+        }
+        #hybrid-output-container {
+            background-color: #272822;
+            color: #F8F8F2;
+            padding: 1.5em;
+            border-radius: 0.5rem;
+            font-family: 'Vazirmatn', 'Inter', sans-serif;
+            line-height: 1.7;
+            width: 100%;
+            height: 70vh; /* ارتفاع خروجی تب ۲ */
+            overflow-y: auto;
+            border: 1px solid #4B5563;
+        }
+        #hybrid-output-container h3 {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: #66D9EF;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            font-family: 'Vazirmatn', 'Inter', sans-serif;
+            border-bottom: 1px solid #4B5563;
+            padding-bottom: 5px;
+        }
+        #hybrid-output-container h3 code {
+            font-family: "Consolas", "Courier New", monospace;
+            color: #E6DB74;
+            direction: ltr;
+            display: block;
+        }
+        #hybrid-output-container p {
+            margin-bottom: 1rem;
+        }
+        /* استایل کد درون پاراگراف ها */
+        #hybrid-output-container p code, #hybrid-output-container li code {
+            font-family: "Consolas", "Courier New", monospace;
+            color: #E6DB74;
+            background-color: #3E3D32;
+            padding: 2px 5px;
+            border-radius: 4px;
+            direction: ltr;
+        }
+        .pandas-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            direction: ltr;
+            font-family: "Consolas", "Courier New", monospace;
+        }
+        .pandas-table th, .pandas-table td {
+            border: 1px solid #4B5563;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .pandas-table th {
+            background-color: #3E3D32;
+            color: #E6DB74;
+        }
+        .pandas-table td {
+            background-color: #272822;
+            color: #F8F8F2;
+        }
+        .pandas-table .highlight-new {
+            background-color: #A6E22E;
+            color: #272822;
+            font-weight: bold;
+        }
+        #hybrid-output-container hr {
+            border-color: #4B5563;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .placeholder-text {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #75715E;
+        }
+        /* --- (پایان استایل‌های تب ۲) --- */
+
+
+        /* استایل دکمه‌های تب */
+        .tab-btn {
+            @apply px-6 py-3 font-bold text-gray-400 rounded-t-lg transition-colors;
+        }
+        .tab-btn.active {
+            @apply text-blue-400 bg-gray-800 border-b-2 border-blue-400;
+        }
+        .tab-btn:not(.active):hover {
+            @apply text-gray-200;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div class="container mx-auto p-6">
+
+        <h1 class="text-3xl font-bold text-center text-white mb-6">
+            💡 سوپر اپ: ایده، کد، و تجسم هیبریدی
+        </h1>
+
+        <div class="max-w-md mx-auto mb-8 p-6 bg-gray-800 rounded-lg shadow-lg">
+            <label for="api-key" class="block text-sm font-bold text-gray-300 mb-2">
+                🔑 کلید API گوگل (Gemini)
+            </label>
+            <input type="password" id="api-key"
+                   class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   placeholder="کلید API خود را وارد کنید...">
+            <button id="save-key-btn" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">
+                ذخیره کلید
+            </button>
+            <p id="api-status" class="text-xs text-green-500 mt-2 text-center hidden">
+                ✅ کلید API در مرورگر ذخیره شد.
+            </p>
+        </div>
+
+        <div class="border-b border-gray-700 mb-6">
+            <nav class="flex -mb-px justify-center">
+                <button id="tab1-btn" class="tab-btn active">ایده به کد (Text-to-Code)</button>
+                <button id="tab2-btn" class="tab-btn">توضیح و تجسم هیبریدی</button>
+            </nav>
+        </div>
+
+        <div id="tab1-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h2 class="text-xl font-bold mb-3">ایده خود را به کد پایتون تبدیل کنید</h2>
+                    <label for="prompt-code-input" class="block text-sm font-medium text-gray-400 mb-2">
+                        ایده یا دستور خود را به فارسی یا انگلیسی بنویسید:
+                    </label>
+                    <textarea id="prompt-code-input" rows="5"
+                              class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="مثال: ردیف شماره سه از DataFrame x را نمایش بده"></textarea>
+                    <button id="generate-code-btn"
+                            class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition disabled:opacity-50">
+                        🚀 تبدیل به کد
+                    </button>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold mb-3">کد تولید شده:</h2>
+                    <div id="code-output-editor" class="ace-output-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab2-content" class="hidden">
+            <div class="flex flex-col gap-6">
+                
+                <div class="bg-gray-800 p-6 shadow-lg rounded-lg">
+                    <h2 class="text-2xl font-bold mb-4 text-white">۱. منابع دانش (URL)</h2>
+                    <p class="text-sm text-gray-400 mb-4">
+                        URL مستندات یا مقالاتی که می‌خواهید Gemini بر اساس آن‌ها پاسخ دهد را وارد کنید.
+                    </p>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="hybrid-data-url-input"
+                               class="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               placeholder="https://pandas.pydata.org/docs/...">
+                        <button id="hybrid-add-url-button"
+                                class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">
+                            افزودن
+                        </button>
+                    </div>
+                    <div id="hybrid-url-list-container" class="flex flex-col gap-2">
+                        </div>
+                </div>
+
+                <div class="bg-gray-800 p-6 shadow-lg rounded-lg">
+                    <h2 class="text-2xl font-bold mb-4 text-white">۲. کد پایتون</h2>
+                    <p class="text-sm text-gray-400 mb-4">
+                        کدی که می‌خواهید بر اساس منابع بالا توضیح داده و تجسم شود را وارد کنید.
+                    </p>
+                    <div id="hybrid-editor"></div> <button id="hybrid-analyze-button"
+                            class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                        توضیح و تجسم! 🚀
+                    </button>
+                </div>
+
+                <div class="bg-gray-800 p-6 shadow-lg rounded-lg">
+                    <h2 class="text-2xl font-bold mb-4 text-white">۳. تحلیل و تجسم (مبتنی بر منبع)</h2>
+                    <div id="hybrid-output-container"> <div class="placeholder-text">
+                            <p class="text-gray-500">
+                                پاسخ Gemini در اینجا نمایش داده می‌شود.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            </div>
+    </div>
+
+    <script>
+        // --- پرامپت سیستم تب ۱ (ایده به کد) ---
+        // (این پرامپت از index.html اصلی شما آمده است)
+        const SYSTEM_PROMPT_CODER = `
+You are an expert Python and Pandas code generation assistant.
+The user will provide a natural language prompt (in Persian or English).
+You must return *only* the raw Python code that best achieves their goal.
+
+RULES:
+1.  **DO NOT** add any explanations, greetings, apologies, or conversational text.
+2.  **DO NOT** use markdown formatting like \`\`\`python ... \`\`\`.
+3.  Return *only* the raw code block.
+4.  If the user asks for "row number 3" (ردیف شماره سه) of dataframe \`x\`, assume they mean the third row by *position* (0-based indexing), so you should return \`x.iloc[2]\`.
+5.  If the user asks for "the row with index label 3" (ردیف با برچسب ۳), return \`x.loc[3]\`.
+`;
+        
+        // --- (جدید) پرامپت سیستم تب ۲ (هیبریدی) ---
+        // (این پرامپت از replace_pandas.html آمده است)
+        function get_gemini_prompt_hybrid(user_code, url_list) {
+            const url_context_block = url_list.length > 0 ? `
+---
+**KNOWLEDGE SOURCES (منابع دانش):**
+Your knowledge is STRICTLY LIMITED to the content found at the following URLs.
+Your FIRST TASK is to fetch and thoroughly read the content from these URLs.
+You MUST NOT use any general knowledge unless the answer is not in these sources.
+
+**PROVIDED URLs:**
+${url_list.map(url => `- ${url}`).join('\n')}
+---
+` : `
+---
+**NO KNOWLEDGE SOURCES PROVIDED.**
+You must answer using your general knowledge.
+---
+`;
+
+            return `
+You are a "Hybrid AI Code Explainer and Pandas Visualizer".
+Your knowledge is grounded in the documents provided by the user.
+
+${url_context_block}
+
+**USER'S CODE TO ANALYZE:**
+\`\`\`python
+${user_code}
+\`\`\`
+---
+**YOUR TASK (وظیفه شما):**
+Your task is to provide a step-by-step analysis of the user's code.
+1.  Analyze the user's code line by line.
+2.  Identify *only* the key lines, especially those that create or modify a Pandas DataFrame (e.g., \`pd.DataFrame\`, \`df['new_col'] = ...\`, \`df.groupby()\`, \`df.merge()\`).
+3.  For each identified line, you MUST generate an HTML block containing **TWO PARTS**:
+    
+    **Part A: The Explanation (توضیح)**
+    * An \`<h3>\` tag containing the exact line of code wrapped in \`<code>\`.
+    * A \`<p>\` tag explaining *what* the operation does.
+    * **CRITICAL RULE:** This explanation MUST be based on the information found in the PROVIDED URLs (if any). Be friendly and simple.
+    
+    **Part B: The Visualization (تجسم)**
+    * If the line *results in a DataFrame*, you MUST ALSO provide:
+    * A \`<p><strong>DataFrame State (showing 'df_name.head(5)'):</strong></p>\` tag. (Use the correct variable name).
+    * An HTML \`<table>\` representing the \`.head(5)\` of the *resulting* DataFrame.
+    * Use this exact structure: \`<table class="pandas-table">\`.
+    * Use \`<thead>\`, \`<tbody>\`, \`<th>\`, \`<td>\`.
+    * If a column is *new* or *modified* in that step, add the class \`"highlight-new"\` to its \`<th>\` and ALL its \`<td>\` cells.
+
+4.  **OUTPUT FORMAT:**
+    * You MUST ONLY output the raw HTML blocks.
+    * Separate each step's block with an \`<hr>\` tag.
+    * DO NOT wrap the output in \`\`\`html ... \`\`\`.
+    * DO NOT include \`<html>\`, \`<head>\`, or \`<body>\` tags.
+
+---
+**EXAMPLE OF YOUR TASK:**
+\`\`\`
+<h3><code>df = pd.DataFrame({'age': [25, 30]})</code></h3>
+<p>بر اساس مستندات پانداس، این خط یک دیتافریم جدید از یک دیکشنری می‌سازد...</p>
+<p><strong>DataFrame State (showing 'df.head(5)'):</strong></p>
+<table class="pandas-table">
+  <thead><tr><th class="highlight-new">age</th></tr></thead>
+  <tbody>
+    <tr><td class="highlight-new">25</td></tr>
+    <tr><td class="highlight-new">30</td></tr>
+  </tbody>
+</table>
+<hr>
+<h3><code>df['is_adult'] = df['age'] > 28</code></h3>
+<p>اینجا ما در حال ایجاد یک ستون جدید به نام 'is_adult' هستیم...</p>
+<p><strong>DataFrame State (showing 'df.head(5)'):</strong></p>
+<table class="pandas-table">
+  <thead>
+    <tr><th>age</th><th class="highlight-new">is_adult</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>25</td><td class="highlight-new">False</td></tr>
+    <tr><td>30</td><td class="highlight-new">True</td></tr>
+  </tbody>
+</table>
+\`\`\`
+---
+Now, apply this hybrid logic to the user's code.
+`;
+        }
+        
+        // (جدید) کد پیش فرض برای ادیتور تب ۲
+        const DEFAULT_HYBRID_CODE = `import pandas as pd
+data = {
+    'product_name': ['A', 'B', 'A', 'B', 'A'],
+    'quantity': [10, 5, 8, 12, 5],
+    'price': [100, 150, 100, 150, 100]
+}
+df = pd.DataFrame(data)
+df['total_value'] = df['quantity'] * df['price']
+df_summary = df.groupby('product_name')['total_value'].sum().reset_index()
+print(df_summary)
+`;
+
+        // --- Global State ---
+        let apiKey = null;
+        let codeOutputEditor; // ادیتور تب ۱
+        let hybridEditor; // ادیتور تب ۲
+
+        // --- DOM Elements ---
+        // مشترک
+        const tab1Btn = document.getElementById('tab1-btn');
+        const tab2Btn = document.getElementById('tab2-btn');
+        const tab1Content = document.getElementById('tab1-content');
+        const tab2Content = document.getElementById('tab2-content');
+        const apiKeyInput = document.getElementById('api-key');
+        const saveKeyBtn = document.getElementById('save-key-btn');
+        const apiStatus = document.getElementById('api-status');
+
+        // تب ۱
+        const promptCodeInput = document.getElementById('prompt-code-input');
+        const generateCodeBtn = document.getElementById('generate-code-btn');
+        
+        // (جدید) تب ۲
+        const hybridAnalyzeButton = document.getElementById('hybrid-analyze-button');
+        const hybridOutputContainer = document.getElementById('hybrid-output-container');
+        const hybridDataUrlInput = document.getElementById('hybrid-data-url-input');
+        const hybridAddUrlButton = document.getElementById('hybrid-add-url-button');
+        const hybridUrlListContainer = document.getElementById('hybrid-url-list-container');
+
+
+        // --- Main App Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // 1. Initialize Ace Editors
+            
+            // ادیتور تب ۱ (ایده به کد) - فقط خواندنی
+            codeOutputEditor = ace.edit("code-output-editor");
+            codeOutputEditor.setTheme("ace/theme/monokai");
+            codeOutputEditor.session.setMode("ace/mode/python");
+            codeOutputEditor.setReadOnly(true);
+            codeOutputEditor.setValue("# کد تولید شده در اینجا نمایش داده خواهد شد", -1);
+
+            // (جدید) ادیتور تب ۲ (تجسم هیبریدی) - قابل نوشتن
+            hybridEditor = ace.edit("hybrid-editor"); // با ID جدید
+            hybridEditor.setTheme("ace/theme/monokai");
+            hybridEditor.session.setMode("ace/mode/python");
+            hybridEditor.setValue(DEFAULT_HYBRID_CODE, -1);
+            hybridEditor.setFontSize(14);
+            hybridEditor.container.style.direction = "ltr";
+            
+            // 2. Setup Event Listeners
+
+            // (به روز شده) منطق ذخیره کلید API با localStorage
+            apiKeyInput.value = localStorage.getItem('gemini_api_key') || '';
+            if (apiKeyInput.value) {
+                apiKey = apiKeyInput.value;
+                apiStatus.classList.remove('hidden');
+                apiStatus.textContent = '✅ کلید API از حافظه بارگیری شد.';
+            }
+            saveKeyBtn.addEventListener('click', () => {
+                if (apiKeyInput.value) {
+                    apiKey = apiKeyInput.value;
+                    localStorage.setItem('gemini_api_key', apiKey); // ذخیره در localStorage
+                    apiStatus.classList.remove('hidden');
+                    apiStatus.textContent = '✅ کلید API ذخیره شد.';
+                }
+            });
+
+            // تعویض تب
+            tab1Btn.addEventListener('click', () => {
+                tab1Content.classList.remove('hidden');
+                tab2Content.classList.add('hidden');
+                tab1Btn.classList.add('active');
+                tab2Btn.classList.remove('active');
+            });
+
+            tab2Btn.addEventListener('click', () => {
+                tab1Content.classList.add('hidden');
+                tab2Content.classList.remove('hidden');
+                tab1Btn.classList.remove('active');
+                tab2Btn.classList.add('active');
+            });
+
+            // شنونده دکمه تب ۱
+            generateCodeBtn.addEventListener('click', handleGenerateCode);
+
+            // (جدید) شنونده های دکمه تب ۲
+            hybridAnalyzeButton.addEventListener('click', handleGenerateHybrid);
+            hybridAddUrlButton.addEventListener('click', () => {
+                const newUrl = hybridDataUrlInput.value.trim();
+                if (newUrl) {
+                    let currentUrls = JSON.parse(localStorage.getItem('pandas_urls_hybrid') || '[]');
+                    currentUrls.push(newUrl);
+                    localStorage.setItem('pandas_urls_hybrid', JSON.stringify(currentUrls));
+                    hybridDataUrlInput.value = '';
+                    renderHybridUrlList(); // فراخوانی تابع رندر تب ۲
+                }
+            });
+
+            // (جدید) رندر کردن لیست URL های تب ۲ در بارگذاری صفحه
+            renderHybridUrlList();
+        });
+
+        // --- (ماندگار) توابع تب ۱ ---
+
+        async function handleGenerateCode() {
+            if (!validateApiKey()) return;
+            
+            const prompt = promptCodeInput.value;
+            if (!prompt.trim()) {
+                alert("لطفا ابتدا ایده خود را بنویسید.");
+                return;
+            }
+
+            setLoading(generateCodeBtn, '... در حال پردازش');
+            codeOutputEditor.setValue("... 🧠 در حال پردازش با Gemini", -1);
+            codeOutputEditor.session.setMode("ace/mode/text");
+
+            try {
+                // تماس با تابع API مخصوص تب ۱
+                const generatedCode = await callGemini_Tab1(prompt, SYSTEM_PROMPT_CODER);
+                codeOutputEditor.setValue(generatedCode, -1);
+                codeOutputEditor.session.setMode("ace/mode/python");
+            } catch (error) {
+                codeOutputEditor.setValue(`خطا: ${error.message}`, -1);
+            } finally {
+                setLoading(generateCodeBtn, '🚀 تبدیل به کد', false);
+            }
+        }
+
+        // تابع تماس API تب ۱ (ایده به کد)
+        async function callGemini_Tab1(prompt, systemInstruction) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: systemInstruction }] },
+                generationConfig: { "temperature": 0.0, "maxOutputTokens": 2048 },
+                safetySettings: [
+                    { "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" },
+                    { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" },
+                    { "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE" },
+                    { "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE" }
+                ]
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            return handleApiResponse(response); // استفاده از هندلر مشترک
+        }
+
+
+        // --- (جدید) توابع تب ۲ (تجسم هیبریدی) ---
+        // (تمام این توابع از replace_pandas.html آمده اند)
+
+        async function handleGenerateHybrid() {
+            if (!validateApiKey()) return;
+
+            const userCode = hybridEditor.getValue(); // استفاده از ادیتور تب ۲
+            if (!userCode.trim()) {
+                alert("لطفا مقداری کد برای تحلیل وارد کنید.");
+                return;
+            }
+            
+            const urlList = JSON.parse(localStorage.getItem('pandas_urls_hybrid') || '[]');
+
+            setLoading(hybridAnalyzeButton, 'در حال تحلیل...');
+            hybridOutputContainer.innerHTML = `
+                <div class="placeholder-text">
+                    <p class="text-blue-400">Gemini در حال خواندن منابع، توضیح و تجسم است... 🧠</p>
+                </div>`;
+
+            try {
+                const prompt = get_gemini_prompt_hybrid(userCode, urlList);
+                // تماس با تابع API مخصوص تب ۲
+                const visual_html = await callGemini_Tab2(prompt);
+                displayHybridOutput(visual_html);
+            } catch (error) {
+                hybridOutputContainer.innerHTML = `
+                    <div class="placeholder-text" style="align-items: flex-start;">
+                        <p class="text-red-400 p-4" style="direction: ltr; text-align: left;">
+                            <strong>Error:</strong> ${escapeHTML(error.message)}
+                        </p>
+                    </div>`;
+                console.error("API Error:", error);
+            } finally {
+                setLoading(hybridAnalyzeButton, 'توضیح و تجسم! 🚀', false);
+            }
+        }
+
+        // تابع تماس API تب ۲ (هیبریدی)
+        async function callGemini_Tab2(promptText) {
+            // استفاده از مدل Pro برای قابلیت خواندن URL و زمینه بزرگتر
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [{
+                    parts: [{ text: promptText }] // پرامپت کامل (شامل دستور سیستم) در اینجا می آید
+                }],
+                generationConfig: { "temperature": 0.0, "maxOutputTokens": 4096 },
+                safetySettings: [
+                    { "category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE" },
+                    { "category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE" },
+                    { "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE" },
+                    { "category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE" }
+                ]
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            return handleApiResponse(response); // استفاده از هندلر مشترک
+        }
+
+        // تابع رندر خروجی تب ۲
+        function displayHybridOutput(html_content) {
+            const clean_html = html_content.replace(/```html/g, "").replace(/```/g, "").trim();
+            hybridOutputContainer.innerHTML = clean_html;
+            
+            if (clean_html.length === 0) {
+                 hybridOutputContainer.innerHTML = `
+                    <div class="placeholder-text">
+                        <p class="text-yellow-400">
+                            Gemini پاسخی تولید نکرد یا عملیاتی برای تجسم پیدا نکرد.
+                        </p>
+                    </div>`;
+            }
+        }
+        
+        // تابع رندر لیست URL برای تب ۲
+        function renderHybridUrlList() {
+            hybridUrlListContainer.innerHTML = '';
+            // استفاده از یک کلید localStorage متفاوت برای جلوگیری از تداخل
+            const urls = JSON.parse(localStorage.getItem('pandas_urls_hybrid') || '[]');
+            
+            urls.forEach((url, index) => {
+                const urlElement = document.createElement('div');
+                urlElement.className = 'flex items-center justify-between bg-gray-700 p-2 rounded-lg';
+                urlElement.innerHTML = `
+                    <span class="text-sm text-gray-300 truncate" style="direction: ltr; text-align: left;">${escapeHTML(url)}</span>
+                    <button class="remove-url-button bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded-md" data-index="${index}">
+                        حذف
+                    </button>
+                `;
+                hybridUrlListContainer.appendChild(urlElement);
+            });
+
+            hybridUrlListContainer.querySelectorAll('.remove-url-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const indexToRemove = parseInt(e.target.dataset.index, 10);
+                    let currentUrls = JSON.parse(localStorage.getItem('pandas_urls_hybrid') || '[]');
+                    currentUrls.splice(indexToRemove, 1);
+                    localStorage.setItem('pandas_urls_hybrid', JSON.stringify(currentUrls));
+                    renderHybridUrlList();
+                });
+            });
+        }
+
+
+        // --- توابع کمکی مشترک ---
+
+        // (جدید) هندلر مشترک پاسخ API
+        async function handleApiResponse(response) {
+            if (!response.ok) {
+                const errorData = await response.json();
+                let message = errorData.error.message || `HTTP error! status: ${response.status}`;
+                // این یک خطای رایج است زمانی که مدل URL را نمی خواند
+                if (message.includes("400") && message.includes("URI is not valid")) {
+                    message = "خطا: Gemini نتوانست یکی از URL ها را بخواند. (کد 400). لطفاً URL را بررسی کنید یا آن را حذف کنید.";
+                }
+                throw new Error(message);
+            }
+
+            const result = await response.json();
+
+            if (result.candidates && result.candidates.length > 0) {
+                const finishReason = result.candidates[0].finishReason;
+                // MAX_TOKENS یک دلیل معتبر برای توقف است
+                if (finishReason !== "STOP" && finishReason !== "MAX_TOKENS") {
+                     throw new Error(`پاسخ توسط Gemini بلاک شد. دلیل: ${finishReason}`);
+                }
+                if (!result.candidates[0].content.parts || result.candidates[0].content.parts.length === 0) {
+                    throw new Error(`پاسخ بلاک شد. دلیل: ${finishReason}. (محتوا خالی است)`);
+                }
+                return result.candidates[0].content.parts[0].text;
+            } else {
+                if (result.promptFeedback && result.promptFeedback.blockReason) {
+                    throw new Error(`پرامپت بلاک شد. دلیل: ${result.promptFeedback.blockReason}`);
+                }
+                throw new Error("Invalid response structure from Gemini API.");
+            }
+        }
+        
+        // تابع کمکی (مشترک)
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+            });
+        }
+
+        // اعتبارسنجی کلید (مشترک)
+        function validateApiKey() {
+            if (!apiKey) {
+                alert("لطفا ابتدا کلید API خود را در بالای صفحه وارد و ذخیره کنید.");
+                return false;
+            }
+            return true;
+        }
+
+        // تنظیم حالت بارگذاری دکمه (مشترک)
+        function setLoading(button, text, disabled = true) {
+            button.disabled = disabled;
+            button.innerHTML = text;
+        }
+
+    </script>
+</body>
+</html>
